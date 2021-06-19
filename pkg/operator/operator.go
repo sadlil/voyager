@@ -24,6 +24,7 @@ import (
 	"voyagermesh.dev/voyager/pkg/config"
 
 	prom "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
+	auditlib "go.bytebuilders.dev/audit/lib"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -56,7 +57,7 @@ type Operator struct {
 	voyagerInformerFactory voyagerinformers.SharedInformerFactory
 
 	recorder record.EventRecorder
-	auditor  cache.ResourceEventHandler
+	auditor  *auditlib.EventPublisher
 
 	// ConfigMap
 	cfgQueue    *queue.Worker
