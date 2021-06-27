@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,8 +24,6 @@ import (
 
 // Interface provides access to all the informers in this group version.
 type Interface interface {
-	// Certificates returns a CertificateInformer.
-	Certificates() CertificateInformer
 	// Ingresses returns a IngressInformer.
 	Ingresses() IngressInformer
 }
@@ -39,11 +37,6 @@ type version struct {
 // New returns a new Interface.
 func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakListOptions internalinterfaces.TweakListOptionsFunc) Interface {
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
-}
-
-// Certificates returns a CertificateInformer.
-func (v *version) Certificates() CertificateInformer {
-	return &certificateInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // Ingresses returns a IngressInformer.

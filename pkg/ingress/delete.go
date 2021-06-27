@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 )
 
 func (c *controller) deleteConfigMap() error {
-	c.logger.Infof("Deleting ConfigMap %s/%s", c.Ingress.Namespace, c.Ingress.OffshootName())
+	c.logger.Info("Deleting", "configMap", c.Ingress.OffshootName())
 	err := c.KubeClient.CoreV1().ConfigMaps(c.Ingress.Namespace).Delete(context.TODO(), c.Ingress.OffshootName(), metav1.DeleteOptions{})
 	if err != nil && !kerr.IsNotFound(err) {
 		return errors.WithStack(err)
@@ -34,7 +34,7 @@ func (c *controller) deleteConfigMap() error {
 }
 
 func (c *controller) ensureServiceDeleted() error {
-	c.logger.Infof("Deleting Service %s/%s", c.Ingress.Namespace, c.Ingress.OffshootName())
+	c.logger.Info("Deleting", "service", c.Ingress.OffshootName())
 	err := c.KubeClient.CoreV1().Services(c.Ingress.Namespace).Delete(context.TODO(), c.Ingress.OffshootName(), metav1.DeleteOptions{})
 	if err != nil && !kerr.IsNotFound(err) {
 		return errors.WithStack(err)
@@ -43,7 +43,7 @@ func (c *controller) ensureServiceDeleted() error {
 }
 
 func (c *controller) ensureStatsServiceDeleted() error {
-	c.logger.Infof("Deleting Stats Service %s/%s", c.Ingress.Namespace, c.Ingress.StatsServiceName())
+	c.logger.Info("Deleting", "Stats Service", c.Ingress.StatsServiceName())
 	err := c.KubeClient.CoreV1().Services(c.Ingress.Namespace).Delete(
 		context.TODO(),
 		c.Ingress.StatsServiceName(),

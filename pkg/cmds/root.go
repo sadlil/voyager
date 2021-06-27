@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,21 +17,16 @@ limitations under the License.
 package cmds
 
 import (
-	"flag"
-	"log"
 	"os"
 
 	"voyagermesh.dev/voyager/client/clientset/versioned/scheme"
 
-	"github.com/appscode/go/log/golog"
-	v "github.com/appscode/go/version"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
+	v "gomodules.xyz/x/version"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	_ "k8s.io/client-go/kubernetes/fake"
 	clientsetscheme "k8s.io/client-go/kubernetes/scheme"
-	"kmodules.xyz/client-go/logs"
 	"kmodules.xyz/client-go/tools/cli"
 )
 
@@ -41,20 +36,13 @@ func NewCmdVoyager() *cobra.Command {
 		Short:             `Voyager by Appscode - Secure HAProxy Ingress Controller for Kubernetes`,
 		DisableAutoGenTag: true,
 		PersistentPreRun: func(c *cobra.Command, args []string) {
-			c.Flags().VisitAll(func(flag *pflag.Flag) {
-				log.Printf("FLAG: --%s=%q", flag.Name, flag.Value)
-			})
 			cli.SendAnalytics(c, v.Version.Version)
 
 			utilruntime.Must(scheme.AddToScheme(clientsetscheme.Scheme))
-			cli.LoggerOptions = golog.ParseFlags(c.Flags())
 		},
 	}
-	rootCmd.PersistentFlags().AddGoFlagSet(flag.CommandLine)
-	logs.ParseFlags()
 	rootCmd.PersistentFlags().BoolVar(&cli.EnableAnalytics, "enable-analytics", cli.EnableAnalytics, "Send analytical events to Google Analytics")
 
-	rootCmd.AddCommand(NewCmdExport())
 	rootCmd.AddCommand(NewCmdHAProxyController())
 	rootCmd.AddCommand(NewCmdCheck())
 	rootCmd.AddCommand(v.NewCmdVersion())

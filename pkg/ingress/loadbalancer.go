@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -32,10 +32,10 @@ import (
 	"voyagermesh.dev/voyager/pkg/eventer"
 	_ "voyagermesh.dev/voyager/third_party/forked/cloudprovider/providers"
 
-	"github.com/appscode/go/log"
-	"github.com/appscode/go/types"
-	pcm "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
 	"github.com/pkg/errors"
+	pcm "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
+	"gomodules.xyz/flags"
+	"gomodules.xyz/pointer"
 	core "k8s.io/api/core/v1"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -45,6 +45,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	core_listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/klog/v2"
+	"k8s.io/klog/v2/klogr"
 	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	meta_util "kmodules.xyz/client-go/meta"
@@ -75,7 +77,7 @@ func NewLoadBalancerController(
 	recorder record.EventRecorder) Controller {
 	return &loadBalancerController{
 		controller: &controller{
-			logger:          log.New(ctx),
+			logger:          klogr.New().WithName("loadbalancer").WithValues("namespace", ingress.Namespace, "name", ingress.Name),
 			KubeClient:      kubeClient,
 			WorkloadClient:  workloadClient,
 			CRDClient:       crdClient,
@@ -197,7 +199,7 @@ func (c *loadBalancerController) Reconcile() error {
 		}
 	} else {
 		if err := c.ensureStatsServiceDeleted(); err != nil { // Error ignored intentionally
-			log.Warningf("failed to delete stats Service %s, reason: %s", c.Ingress.StatsServiceName(), err)
+			klog.Warningf("failed to delete stats Service %s, reason: %s", c.Ingress.StatsServiceName(), err)
 		} else {
 			c.recorder.Eventf(
 				c.Ingress.ObjectReference(),
@@ -233,7 +235,7 @@ func (c *loadBalancerController) Reconcile() error {
 		}
 	} else { // monitoring disabled, delete old agent, ignore error here
 		if err := c.ensureMonitoringAgentDeleted(nil); err != nil {
-			log.Warningf("failed to delete old monitoring agent, reason: %s", err)
+			klog.Warningf("failed to delete old monitoring agent, reason: %s", err)
 		}
 	}
 
@@ -251,23 +253,23 @@ func (c *loadBalancerController) EnsureFirewall(svc *core.Service) error {
 // make sure all delete calls require only ingress name and namespace
 func (c *loadBalancerController) Delete() {
 	if err := c.deletePods(); err != nil {
-		c.logger.Errorln(err)
+		c.logger.Error(err, "failed to delete pods")
 	}
 	if err := c.deleteConfigMap(); err != nil {
-		c.logger.Errorln(err)
+		c.logger.Error(err, "failed to delete configmap")
 	}
 	if err := c.ensureRBACDeleted(); err != nil {
-		c.logger.Errorln(err)
+		c.logger.Error(err, "failed to delete rbac")
 	}
 	if err := c.ensureServiceDeleted(); err != nil {
-		c.logger.Errorln(err)
+		c.logger.Error(err, "failed to delete service")
 	}
 	// delete agent before deleting stat service
 	if err := c.ensureMonitoringAgentDeleted(nil); err != nil {
-		c.logger.Errorln(err)
+		c.logger.Error(err, "failed to delete monitoring agent")
 	}
 	if err := c.ensureStatsServiceDeleted(); err != nil {
-		c.logger.Errorln(err)
+		c.logger.Error(err, "failed to delete stats service")
 	}
 }
 
@@ -396,7 +398,7 @@ func (c *loadBalancerController) ensurePods() (kutil.VerbType, error) {
 
 		// assign number of replicas only when there's no controlling hpa
 		if in.Spec.Replicas == nil || !c.isHPAControlled() {
-			in.Spec.Replicas = types.Int32P(c.Ingress.Replicas())
+			in.Spec.Replicas = pointer.Int32P(c.Ingress.Replicas())
 		}
 
 		// pod annotations
@@ -481,7 +483,7 @@ func (c *loadBalancerController) ensurePods() (kutil.VerbType, error) {
 				fmt.Sprintf("--ingress-api-version=%s", c.Ingress.APISchema()),
 				fmt.Sprintf("--ingress-name=%s", c.Ingress.Name),
 				fmt.Sprintf("--qps=%v", c.cfg.QPS),
-			}, cli.LoggerOptions.ToFlags()...),
+			}, flags.LoggerOptions.ToFlags()...),
 			Env: c.ensureEnvVars([]core.EnvVar{
 				{
 					Name:  analytics.Key,

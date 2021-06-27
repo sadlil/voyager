@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/appscode/go/log"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/klog/v2"
 )
 
 func TestNewTestHTTPClient(t *testing.T) {
@@ -48,6 +48,6 @@ func (h testHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Method:         r.Method,
 		RequestHeaders: r.Header,
 	}
-	log.Infoln("Handling HTTP Request")
+	klog.Infoln("Handling HTTP Request")
 	json.NewEncoder(w).Encode(resp)
 }

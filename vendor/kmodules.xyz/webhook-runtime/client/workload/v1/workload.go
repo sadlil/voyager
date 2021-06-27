@@ -1,5 +1,5 @@
 /*
-Copyright The Kmodules Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package v1
 
 import (
@@ -25,7 +26,6 @@ import (
 	v1 "kmodules.xyz/webhook-runtime/apis/workload/v1"
 
 	jsonpatch "github.com/evanphx/json-patch"
-	"github.com/golang/glog"
 	jsoniter "github.com/json-iterator/go"
 	appsv1 "k8s.io/api/apps/v1"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
@@ -40,6 +40,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
 var json = jsoniter.ConfigFastest
@@ -554,7 +555,7 @@ func (c *workloads) PatchObject(ctx context.Context, cur, mod *v1.Workload, opts
 	if len(patch) == 0 || string(patch) == "{}" {
 		return cur, kutil.VerbUnchanged, nil
 	}
-	glog.V(3).Infof("Patching workload %s/%s with %s.", cur.Namespace, cur.Name, string(patch))
+	klog.V(3).Infof("Patching workload %s/%s with %s.", cur.Namespace, cur.Name, string(patch))
 
 	var out runtime.Object
 	switch mod.Object.(type) {
@@ -623,7 +624,7 @@ func (c *workloads) CreateOrPatch(ctx context.Context, obj runtime.Object, trans
 		if err != nil {
 			return nil, kutil.VerbUnchanged, err
 		}
-		glog.V(3).Infof("Creating %s %s/%s.", gvk, c.ns, name)
+		klog.V(3).Infof("Creating %s %s/%s.", gvk, c.ns, name)
 		out, err := c.Create(ctx, transform(&v1.Workload{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       gvk.Kind,

@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,27 +17,29 @@ limitations under the License.
 package main
 
 import (
-	"log"
 	"os"
 	"runtime"
 
 	"voyagermesh.dev/voyager/pkg/cmds"
 
+	_ "go.bytebuilders.dev/license-verifier/info"
+	logs "gomodules.xyz/kglog"
 	_ "k8s.io/api/core/v1"
 	_ "k8s.io/client-go/kubernetes/fake"
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
-	"kmodules.xyz/client-go/logs"
+	"k8s.io/klog/v2"
 )
 
 func main() {
-	logs.InitLogs()
+	rootCmd := cmds.NewCmdVoyager()
+	logs.Init(rootCmd, true)
 	defer logs.FlushLogs()
 
 	if len(os.Getenv("GOMAXPROCS")) == 0 {
 		runtime.GOMAXPROCS(runtime.NumCPU())
 	}
 
-	if err := cmds.NewCmdVoyager().Execute(); err != nil {
-		log.Fatal(err)
+	if err := rootCmd.Execute(); err != nil {
+		klog.Fatal(err)
 	}
 }

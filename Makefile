@@ -1,5 +1,4 @@
-# Copyright 2019 AppsCode Inc.
-# Copyright 2016 The Kubernetes Authors.
+# Copyright AppsCode Inc. and Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,6 +14,10 @@
 
 SHELL=/bin/bash -o pipefail
 
+PRODUCT_OWNER_NAME := appscode
+PRODUCT_NAME       := voyager-community
+ENFORCE_LICENSE    ?=
+
 GO_PKG   := voyagermesh.dev
 REPO     := $(notdir $(shell pwd))
 BIN      := voyager
@@ -22,7 +25,7 @@ COMPRESS ?= no
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS          ?= "crd:trivialVersions=true,preserveUnknownFields=false,crdVersions={v1beta1,v1}"
-CODE_GENERATOR_IMAGE ?= appscode/gengo:release-1.18
+CODE_GENERATOR_IMAGE ?= appscode/gengo:release-1.21
 API_GROUPS           ?= voyager:v1beta1
 
 # Where to push the docker image.
@@ -54,10 +57,10 @@ endif
 
 REPO_ROOT := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 
-SRC_PKGS := *.go apis client pkg third_party
-SRC_DIRS := $(SRC_PKGS) test hack/gencrd hack/gendocs # directories which hold app source (not vendored)
+SRC_PKGS := apis client pkg third_party
+SRC_DIRS := $(SRC_PKGS) *.go test hack/gencrd hack/gendocs # directories which hold app source (not vendored)
 
-DOCKER_PLATFORMS := linux/amd64 linux/arm64
+DOCKER_PLATFORMS := linux/amd64
 BIN_PLATFORMS    := $(DOCKER_PLATFORMS)
 
 # Used internally.  Users should pass GOOS and/or GOARCH.
@@ -86,10 +89,10 @@ TAG_HAPROXY_DEB := $(TAG_HAPROXY)
 TAG_HAPROXY_ALP := $(HAPROXY_VERSION)-$(VERSION)-alpine_$(OS)_$(ARCH)
 
 
-GO_VERSION       ?= 1.14
+GO_VERSION       ?= 1.16
 BUILD_IMAGE      ?= appscode/golang-dev:$(GO_VERSION)
 TEST_IMAGE       ?= appscode/golang-dev:$(GO_VERSION)-voyager
-CHART_TEST_IMAGE ?= quay.io/helmpack/chart-testing:v3.0.0-rc.1
+CHART_TEST_IMAGE ?= quay.io/helmpack/chart-testing:v3.0.0
 
 OUTBIN = bin/$(OS)_$(ARCH)/$(BIN)
 ifeq ($(OS),windows)
@@ -117,6 +120,9 @@ DOCKER_REPO_ROOT := /go/src/$(GO_PKG)/$(REPO)
 # If you want to build all containers, see the 'all-container' rule.
 # If you want to build AND push all containers, see the 'all-push' rule.
 all: fmt build
+
+KUBE_NAMESPACE ?= voyager
+LICENSE_FILE   ?=
 
 # For the following OS/ARCH expansions, we transform OS/ARCH into OS_ARCH
 # because make pattern rules don't match with embedded '/' characters.
@@ -192,7 +198,7 @@ clientset:
 # Generate openapi schema
 .PHONY: openapi
 openapi: $(addprefix openapi-, $(subst :,_, $(API_GROUPS)))
-	@echo "Generating api/openapi-spec/swagger.json"
+	@echo "Generating openapi/swagger.json"
 	@docker run --rm                                     \
 		-u $$(id -u):$$(id -g)                           \
 		-v /tmp:/.cache                                  \
@@ -207,7 +213,7 @@ openapi: $(addprefix openapi-, $(subst :,_, $(API_GROUPS)))
 
 openapi-%:
 	@echo "Generating openapi schema for $(subst _,/,$*)"
-	@mkdir -p api/api-rules
+	@mkdir -p .config/api-rules
 	@docker run --rm                                     \
 		-u $$(id -u):$$(id -g)                           \
 		-v /tmp:/.cache                                  \
@@ -219,9 +225,9 @@ openapi-%:
 		openapi-gen                                      \
 			--v 1 --logtostderr                          \
 			--go-header-file "./hack/license/go.txt" \
-			--input-dirs "$(GO_PKG)/$(REPO)/apis/$(subst _,/,$*),k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/api/resource,k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/util/intstr,k8s.io/apimachinery/pkg/version,k8s.io/api/core/v1,k8s.io/api/apps/v1,github.com/appscode/go/encoding/json/types,kmodules.xyz/monitoring-agent-api/api/v1,k8s.io/api/rbac/v1" \
+			--input-dirs "$(GO_PKG)/$(REPO)/apis/$(subst _,/,$*),k8s.io/apimachinery/pkg/apis/meta/v1,k8s.io/apimachinery/pkg/api/resource,k8s.io/apimachinery/pkg/runtime,k8s.io/apimachinery/pkg/util/intstr,k8s.io/apimachinery/pkg/version,k8s.io/api/core/v1,k8s.io/api/apps/v1,kmodules.xyz/monitoring-agent-api/api/v1,k8s.io/api/rbac/v1" \
 			--output-package "$(GO_PKG)/$(REPO)/apis/$(subst _,/,$*)" \
-			--report-filename api/api-rules/violation_exceptions.list
+			--report-filename .config/api-rules/violation_exceptions.list
 
 # Generate CRD manifests
 .PHONY: gen-crds
@@ -238,7 +244,7 @@ gen-crds:
 		controller-gen                      \
 			$(CRD_OPTIONS)                  \
 			paths="./apis/..."              \
-			output:crd:artifacts:config=api/crds
+			output:crd:artifacts:config=crds
 
 crds_to_patch := voyager.appscode.com_ingresses.yaml
 
@@ -246,12 +252,12 @@ crds_to_patch := voyager.appscode.com_ingresses.yaml
 patch-crds: $(addprefix patch-crd-, $(crds_to_patch))
 patch-crd-%: $(BUILD_DIRS)
 	@echo "patching $*"
-	@kubectl patch -f api/crds/$* -p "$$(cat hack/crd-patch.json)" --type=json --local=true -o yaml > bin/$*
-	@mv bin/$* api/crds/$*
+	@kubectl patch -f crds/$* -p "$$(cat hack/crd-patch.json)" --type=json --local=true -o yaml > bin/$*
+	@mv bin/$* crds/$*
 
 .PHONY: label-crds
 label-crds: $(BUILD_DIRS)
-	@for f in api/crds/*.yaml; do \
+	@for f in crds/*.yaml; do \
 		echo "applying app.kubernetes.io/name=voyager label to $$f"; \
 		kubectl label --overwrite -f $$f --local=true -o yaml app.kubernetes.io/name=voyager > bin/crd.yaml; \
 		mv bin/crd.yaml $$f; \
@@ -260,22 +266,8 @@ label-crds: $(BUILD_DIRS)
 .PHONY: gen-crd-protos
 gen-crd-protos: $(addprefix gen-crd-protos-, $(subst :,_, $(API_GROUPS)))
 
-.PHONY: gen-bindata
-gen-bindata:
-	@docker run                                                 \
-	    -i                                                      \
-	    --rm                                                    \
-	    -u $$(id -u):$$(id -g)                                  \
-	    -v $$(pwd):/src                                         \
-	    -w /src/api/crds                                        \
-		-v /tmp:/.cache                                         \
-	    --env HTTP_PROXY=$(HTTP_PROXY)                          \
-	    --env HTTPS_PROXY=$(HTTPS_PROXY)                        \
-	    $(BUILD_IMAGE)                                          \
-	    go-bindata -ignore=\\.go -ignore=\\.DS_Store -mode=0644 -modtime=1573722179 -o bindata.go -pkg crds ./...
-
 .PHONY: manifests
-manifests: gen-crds label-crds gen-bindata
+manifests: gen-crds label-crds
 
 .PHONY: gen
 gen: clientset manifests openapi
@@ -324,6 +316,9 @@ $(OUTBIN): .go/$(OUTBIN).stamp
 	    --env HTTPS_PROXY=$(HTTPS_PROXY)                        \
 	    $(BUILD_IMAGE)                                          \
 	    /bin/bash -c "                                          \
+	        PRODUCT_OWNER_NAME=$(PRODUCT_OWNER_NAME)            \
+	        PRODUCT_NAME=$(PRODUCT_NAME)                        \
+	        ENFORCE_LICENSE=$(ENFORCE_LICENSE)                  \
 	        ARCH=$(ARCH)                                        \
 	        OS=$(OS)                                            \
 	        VERSION=$(VERSION)                                  \
@@ -386,10 +381,10 @@ docker-manifest-%:
 	DOCKER_CLI_EXPERIMENTAL=enabled docker manifest push $(IMAGE):$(VERSION_$*)
 
 
-DOTFILE_HAPROXY  = $(REGISTRY)_haproxy-$(TAG_HAPROXY)
+DOTFILE_HAPROXY = $(subst /,_,$(REGISTRY))_haproxy-$(TAG_HAPROXY)
 
 haproxy-container: bin/.container-$(DOTFILE_HAPROXY)-DEB bin/.container-$(DOTFILE_HAPROXY)-ALP
-bin/.container-$(DOTFILE_HAPROXY)-%: bin/.container-$(DOTFILE_IMAGE)-PROD
+bin/.container-$(DOTFILE_HAPROXY)-%: $(BUILD_DIRS) bin/$(OS)_$(ARCH)/$(BIN)
 	@echo "haproxy: $(REGISTRY)/haproxy:$(TAG_HAPROXY_$*)"
 	@sed                                    \
 		-e 's|{ARG_BIN}|$(BIN)|g'           \
@@ -442,7 +437,7 @@ unit-tests: $(BUILD_DIRS) bin/.container-$(DOTFILE_IMAGE)-TEST
 	    -v $$(pwd)/.go/cache:/.cache                            \
 	    --env HTTP_PROXY=$(HTTP_PROXY)                          \
 	    --env HTTPS_PROXY=$(HTTPS_PROXY)                        \
-	    $(TEST_IMAGE)                                          \
+	    $(TEST_IMAGE)                                           \
 	    /bin/bash -c "                                          \
 	        ARCH=$(ARCH)                                        \
 	        OS=$(OS)                                            \
@@ -552,8 +547,9 @@ endif
 .PHONY: install
 install:
 	@cd ../installer; \
-	helm install voyager-operator charts/voyager --wait \
-		--namespace=kube-system \
+	helm install voyager-community charts/voyager --wait \
+		--namespace=$(KUBE_NAMESPACE) --create-namespace \
+		--set-file license=$(LICENSE_FILE) \
 		--set voyager.registry=$(REGISTRY) \
 		--set voyager.tag=$(TAG) \
 		--set imagePullPolicy=Always \
@@ -564,7 +560,7 @@ install:
 .PHONY: uninstall
 uninstall:
 	@cd ../installer; \
-	helm uninstall voyager-operator --namespace=kube-system || true
+	helm uninstall voyager-community --namespace=$(KUBE_NAMESPACE) || true
 
 .PHONY: purge
 purge: uninstall
@@ -574,7 +570,7 @@ purge: uninstall
 dev: gen fmt push
 
 .PHONY: verify
-verify: verify-modules verify-gen
+verify: verify-gen verify-modules
 
 .PHONY: verify-modules
 verify-modules:

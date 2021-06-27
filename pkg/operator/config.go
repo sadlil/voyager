@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,13 +22,15 @@ import (
 	"voyagermesh.dev/voyager/pkg/config"
 	"voyagermesh.dev/voyager/pkg/eventer"
 
-	prom "github.com/coreos/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
+	prom "github.com/prometheus-operator/prometheus-operator/pkg/client/versioned/typed/monitoring/v1"
+	auditlib "go.bytebuilders.dev/audit/lib"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	reg_util "kmodules.xyz/client-go/admissionregistration/v1beta1"
 	"kmodules.xyz/client-go/discovery"
+	"kmodules.xyz/client-go/tools/cli"
 	hooks "kmodules.xyz/webhook-runtime/admission/v1beta1"
 	wcs "kmodules.xyz/webhook-runtime/client/workload/v1"
 )
@@ -40,6 +42,7 @@ const (
 type OperatorConfig struct {
 	config.Config
 
+	LicenseFile    string
 	ClientConfig   *rest.Config
 	KubeClient     kubernetes.Interface
 	WorkloadClient wcs.Interface
@@ -60,6 +63,22 @@ func (c *OperatorConfig) New() (*Operator, error) {
 		return nil, err
 	}
 
+	// audit event publisher
+	// WARNING: https://stackoverflow.com/a/46275411/244009
+	var auditor *auditlib.EventPublisher
+	if c.LicenseFile != "" && cli.EnableAnalytics {
+		mapper, err := discovery.NewDynamicResourceMapper(c.ClientConfig)
+		if err != nil {
+			return nil, err
+		}
+		fn := auditlib.BillingEventCreator{
+			Mapper: mapper,
+		}
+		auditor = auditlib.NewResilientEventPublisher(func() (*auditlib.NatsConfig, error) {
+			return auditlib.NewNatsConfig(c.KubeClient.CoreV1().Namespaces(), c.LicenseFile)
+		}, mapper, fn.CreateEvent)
+	}
+
 	op := &Operator{
 		Config:                 c.Config,
 		ClientConfig:           c.ClientConfig,
@@ -71,6 +90,7 @@ func (c *OperatorConfig) New() (*Operator, error) {
 		voyagerInformerFactory: voyagerinformers.NewFilteredSharedInformerFactory(c.VoyagerClient, c.ResyncPeriod, c.WatchNamespace, nil),
 		PromClient:             c.PromClient,
 		recorder:               eventer.NewEventRecorder(c.KubeClient, "voyager-operator"),
+		auditor:                auditor,
 	}
 
 	if err := op.ensureCustomResourceDefinitions(); err != nil {
@@ -95,7 +115,6 @@ func (c *OperatorConfig) New() (*Operator, error) {
 	op.initNodeWatcher()
 	op.initServiceMonitorWatcher()
 	op.initNamespaceWatcher()
-	op.initCertificateCRDWatcher()
 
 	return op, nil
 }

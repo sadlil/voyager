@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -28,9 +28,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/appscode/go/log"
 	"github.com/moul/http2curl"
 	"github.com/pires/go-proxyproto"
+	"k8s.io/klog/v2"
 )
 
 type httpClient struct {
@@ -208,7 +208,7 @@ func (t *httpClient) do(parse bool) (*Response, error) {
 	*reqCopy = *req
 	reqCopy.Body = nil
 	command, _ := http2curl.GetCurlCommand(reqCopy)
-	log.Infoln("Request:", command)
+	klog.Infoln("Request:", command)
 
 	resp, err := t.client.Do(req)
 	if err != nil {

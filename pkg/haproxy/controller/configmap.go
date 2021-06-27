@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package controller
 import (
 	api "voyagermesh.dev/voyager/apis/voyager/v1beta1"
 
-	ioutilz "github.com/appscode/go/ioutil"
 	"github.com/pkg/errors"
+	atomic_writer "gomodules.xyz/atomic-writer"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/tools/cache"
@@ -75,11 +75,11 @@ func (c *Controller) getConfigMap(name string) (*core.ConfigMap, error) {
 	return obj.(*core.ConfigMap), nil
 }
 
-func (c *Controller) projectHAProxyConfig(r *core.ConfigMap, projections map[string]ioutilz.FileProjection) error {
+func (c *Controller) projectHAProxyConfig(r *core.ConfigMap, projections map[string]atomic_writer.FileProjection) error {
 	cfg, found := r.Data["haproxy.cfg"]
 	if !found {
 		return errors.Errorf("configmap %s/%s is missing haproxy.cfg", c.options.IngressRef.Namespace, r.Name)
 	}
-	projections["haproxy.cfg"] = ioutilz.FileProjection{Mode: 0755, Data: []byte(cfg)}
+	projections["haproxy.cfg"] = atomic_writer.FileProjection{Mode: 0755, Data: []byte(cfg)}
 	return nil
 }

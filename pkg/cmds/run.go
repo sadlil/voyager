@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import (
 
 	"voyagermesh.dev/voyager/pkg/cmds/server"
 
-	"github.com/appscode/go/log"
-	v "github.com/appscode/go/version"
 	"github.com/spf13/cobra"
+	v "gomodules.xyz/x/version"
+	"k8s.io/klog/v2"
 	"kmodules.xyz/client-go/tools/cli"
 )
 
@@ -40,7 +40,7 @@ func NewCmdRun(out, errOut io.Writer, stopCh <-chan struct{}) *cobra.Command {
 			cli.SendPeriodicAnalytics(c, v.Version.Version)
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			log.Infoln("Starting voyager...")
+			klog.Infoln("Starting voyager...")
 
 			if err := o.Complete(); err != nil {
 				return err

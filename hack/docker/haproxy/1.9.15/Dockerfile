@@ -1,4 +1,4 @@
-# Copyright The Voyager Authors.
+# Copyright AppsCode Inc. and Contributors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ RUN set -x \
   && apt-get install -y --no-install-recommends apt-transport-https ca-certificates curl
 
 RUN set -x \
-  && curl -L -o socklog.deb http://ftp.us.debian.org/debian/pool/main/s/socklog/socklog_2.1.0-8.1_{ARG_ARCH}.deb \
+  && curl -L -o socklog.deb http://ftp.us.debian.org/debian/pool/main/s/socklog/socklog_2.1.0+repack-4+b1_{ARG_ARCH}.deb \
   && curl -fsSL -o auth-request.lua https://raw.githubusercontent.com/appscode/haproxy-auth-request/v1.9.15/auth-request.lua
 
 
@@ -32,17 +32,17 @@ FROM haproxy:1.9.15
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN true
 
+# Install socklog
+COPY --from=0 /socklog.deb .
+
 # Installs required packages
 # Change timezone to UTC
 RUN set -x \
   && apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates runit lua5.3 lua-socket \
-  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man /tmp/* /etc/sv /etc/service \
+  && dpkg -i socklog.deb \
+  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man /tmp/* /etc/sv /etc/service socklog.deb \
   && echo 'Etc/UTC' > /etc/timezone
-
-# Install socklog
-COPY --from=0 /socklog.deb .
-RUN set -x && apt install ./socklog.deb && rm socklog.deb
 
 ENV TZ     :/etc/localtime
 ENV LANG   en_US.utf8

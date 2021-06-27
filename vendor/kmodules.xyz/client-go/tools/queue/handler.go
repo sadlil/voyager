@@ -1,5 +1,5 @@
 /*
-Copyright The Kmodules Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,9 +17,11 @@ limitations under the License.
 package queue
 
 import (
+	"reflect"
+	"time"
+
 	meta_util "kmodules.xyz/client-go/meta"
 
-	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -27,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
 )
 
 // QueueingEventHandler queues the key for the object on add and update events
@@ -88,31 +91,71 @@ func NewReconcilableHandler(queue workqueue.RateLimitingInterface) cache.Resourc
 	}
 }
 
+func NewChangeHandler(queue workqueue.RateLimitingInterface) cache.ResourceEventHandler {
+	return &QueueingEventHandler{
+		queue:      queue,
+		enqueueAdd: nil,
+		enqueueUpdate: func(old, nu interface{}) bool {
+			oldObj := old.(metav1.Object)
+			nuObj := nu.(metav1.Object)
+			return nuObj.GetDeletionTimestamp() != nil ||
+				!meta_util.MustAlreadyReconciled(nu) ||
+				!reflect.DeepEqual(oldObj.GetLabels(), nuObj.GetLabels()) ||
+				!reflect.DeepEqual(oldObj.GetAnnotations(), nuObj.GetAnnotations()) ||
+				!meta_util.StatusConditionAwareEqual(old, nu)
+		},
+		enqueueDelete: true,
+	}
+}
+
+func NewSpecStatusChangeHandler(queue workqueue.RateLimitingInterface) cache.ResourceEventHandler {
+	return &QueueingEventHandler{
+		queue:      queue,
+		enqueueAdd: nil,
+		enqueueUpdate: func(old, nu interface{}) bool {
+			nuObj := nu.(metav1.Object)
+			return nuObj.GetDeletionTimestamp() != nil ||
+				!meta_util.MustAlreadyReconciled(nu) ||
+				!meta_util.StatusConditionAwareEqual(old, nu)
+		},
+		enqueueDelete: true,
+	}
+}
+
 func Enqueue(queue workqueue.RateLimitingInterface, obj interface{}) {
 	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 	if err != nil {
-		glog.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		klog.Errorf("Couldn't get key for object %+v: %v", obj, err)
 		return
 	}
 	queue.Add(key)
 }
 
+func EnqueueAfter(queue workqueue.RateLimitingInterface, obj interface{}, duration time.Duration) {
+	key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+	if err != nil {
+		klog.Errorf("Couldn't get key for object %+v: %v", obj, err)
+		return
+	}
+	queue.AddAfter(key, duration)
+}
+
 func (h *QueueingEventHandler) OnAdd(obj interface{}) {
-	glog.V(6).Infof("Add event for %+v\n", obj)
+	klog.V(6).Infof("Add event for %+v\n", obj)
 	if h.enqueueAdd == nil || h.enqueueAdd(obj) {
 		Enqueue(h.queue, obj)
 	}
 }
 
 func (h *QueueingEventHandler) OnUpdate(oldObj, newObj interface{}) {
-	glog.V(6).Infof("Update event for %+v\n", newObj)
+	klog.V(6).Infof("Update event for %+v\n", newObj)
 	if h.enqueueUpdate == nil || h.enqueueUpdate(oldObj, newObj) {
 		Enqueue(h.queue, newObj)
 	}
 }
 
 func (h *QueueingEventHandler) OnDelete(obj interface{}) {
-	glog.V(6).Infof("Delete event for %+v\n", obj)
+	klog.V(6).Infof("Delete event for %+v\n", obj)
 	if h.enqueueDelete {
 		Enqueue(h.queue, obj)
 	}

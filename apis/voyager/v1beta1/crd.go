@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,15 +17,11 @@ limitations under the License.
 package v1beta1
 
 import (
-	"voyagermesh.dev/voyager/api/crds"
+	"voyagermesh.dev/voyager/crds"
 
 	"kmodules.xyz/client-go/apiextensions"
 )
 
 func (r Ingress) CustomResourceDefinition() *apiextensions.CustomResourceDefinition {
 	return crds.MustCustomResourceDefinition(SchemeGroupVersion.WithResource(ResourceIngresses))
-}
-
-func (c Certificate) CustomResourceDefinition() *apiextensions.CustomResourceDefinition {
-	return crds.MustCustomResourceDefinition(SchemeGroupVersion.WithResource(ResourceCertificates))
 }

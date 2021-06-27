@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,12 +25,11 @@ import (
 	"voyagermesh.dev/voyager/pkg/eventer"
 	"voyagermesh.dev/voyager/pkg/ingress"
 
-	. "github.com/appscode/go/context"
-	"github.com/appscode/go/log"
-	"github.com/golang/glog"
+	. "gomodules.xyz/x/context"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/klog/v2"
 	core_util "kmodules.xyz/client-go/core/v1"
 	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/queue"
@@ -39,6 +38,9 @@ import (
 func (op *Operator) initIngressCRDWatcher() {
 	op.engInformer = op.voyagerInformerFactory.Voyager().V1beta1().Ingresses().Informer()
 	op.engQueue = queue.New("IngressCRD", op.MaxNumRequeues, op.NumThreads, op.reconcileEngress)
+	if op.auditor != nil {
+		op.engInformer.AddEventHandler(op.auditor.ForGVK(api.SchemeGroupVersion.WithKind(api.ResourceKindIngress)))
+	}
 	op.engInformer.AddEventHandler(&cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			engress := obj.(*api.Ingress).DeepCopy()
@@ -67,7 +69,7 @@ func (op *Operator) initIngressCRDWatcher() {
 				return
 			}
 			diff := meta.Diff(old, nu)
-			log.Infof("%s %s/%s has changed. Diff: %s", nu.APISchema(), nu.Namespace, nu.Name, diff)
+			klog.Infof("%s %s/%s has changed. Diff: %s", nu.APISchema(), nu.Namespace, nu.Name, diff)
 
 			if err := nu.IsValid(op.CloudProvider); err != nil {
 				op.recorder.Eventf(
@@ -88,11 +90,11 @@ func (op *Operator) initIngressCRDWatcher() {
 func (op *Operator) reconcileEngress(key string) error {
 	obj, exists, err := op.engInformer.GetIndexer().GetByKey(key)
 	if err != nil {
-		glog.Errorf("Fetching object with key %s from store failed with %v", key, err)
+		klog.Errorf("Fetching object with key %s from store failed with %v", key, err)
 		return err
 	}
 	if !exists {
-		glog.Warningf("Engress %s does not exist anymore\n", key)
+		klog.Warningf("Engress %s does not exist anymore\n", key)
 		return nil
 	}
 
@@ -102,7 +104,7 @@ func (op *Operator) reconcileEngress(key string) error {
 
 	if engress.DeletionTimestamp != nil {
 		if core_util.HasFinalizer(engress.ObjectMeta, voyager.GroupName) {
-			glog.Infof("Delete for engress %s\n", key)
+			klog.Infof("Delete for engress %s\n", key)
 			ctrl.Delete()
 			_, _, err = util.PatchIngress(context.TODO(), op.VoyagerClient.VoyagerV1beta1(), engress, func(obj *api.Ingress) *api.Ingress {
 				obj.ObjectMeta = core_util.RemoveFinalizer(obj.ObjectMeta, voyager.GroupName)
@@ -113,7 +115,7 @@ func (op *Operator) reconcileEngress(key string) error {
 			}
 		}
 	} else {
-		glog.Infof("Sync/Add/Update for engress %s\n", key)
+		klog.Infof("Sync/Add/Update for engress %s\n", key)
 		if !core_util.HasFinalizer(engress.ObjectMeta, voyager.GroupName) && ctrl.FirewallSupported() {
 			_, _, err = util.PatchIngress(context.TODO(), op.VoyagerClient.VoyagerV1beta1(), engress, func(obj *api.Ingress) *api.Ingress {
 				obj.ObjectMeta = core_util.AddFinalizer(obj.ObjectMeta, voyager.GroupName)
@@ -135,7 +137,7 @@ func (op *Operator) reconcileEngress(key string) error {
 		if engress.ShouldHandleIngress(op.IngressClass) {
 			return ctrl.Reconcile()
 		} else {
-			log.Infof("%s %s/%s does not match ingress class", engress.APISchema(), engress.Namespace, engress.Name)
+			klog.Infof("%s %s/%s does not match ingress class", engress.APISchema(), engress.Namespace, engress.Name)
 			ctrl.Delete()
 		}
 	}

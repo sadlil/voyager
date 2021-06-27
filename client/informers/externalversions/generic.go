@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -54,8 +54,6 @@ func (f *genericInformer) Lister() cache.GenericLister {
 func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource) (GenericInformer, error) {
 	switch resource {
 	// Group=voyager.appscode.com, Version=v1beta1
-	case v1beta1.SchemeGroupVersion.WithResource("certificates"):
-		return &genericInformer{resource: resource.GroupResource(), informer: f.Voyager().V1beta1().Certificates().Informer()}, nil
 	case v1beta1.SchemeGroupVersion.WithResource("ingresses"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Voyager().V1beta1().Ingresses().Informer()}, nil
 

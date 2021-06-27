@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,11 +27,10 @@ import (
 	api "voyagermesh.dev/voyager/apis/voyager/v1beta1"
 	api_v1beta1 "voyagermesh.dev/voyager/apis/voyager/v1beta1"
 
-	"github.com/appscode/go/log"
-	"github.com/appscode/go/types"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 	"gomodules.xyz/cert"
+	"gomodules.xyz/pointer"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -39,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
 func (ni *ingressInvocation) GetSkeleton() *api_v1beta1.Ingress {
@@ -141,7 +141,7 @@ func (ni *ingressInvocation) createTestServerController() error {
 			},
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: types.Int32P(2),
+			Replicas: pointer.Int32P(2),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "test-server-" + ni.app,
@@ -351,7 +351,7 @@ func (ni *ingressInvocation) waitForTestServer() error {
 				}
 			}
 		}
-		log.Infoln("Waiting for TestServer to be ready")
+		klog.Infoln("Waiting for TestServer to be ready")
 		time.Sleep(time.Second * 5)
 	}
 	return err
@@ -361,7 +361,7 @@ func (ni *ingressInvocation) NodeSelector() map[string]string {
 	if ni.Config.CloudProvider == api.ProviderMinikube {
 		return map[string]string{"kubernetes.io/hostname": "minikube"}
 	}
-	log.Warningln("No node selector provided for daemon ingress")
+	klog.Warningln("No node selector provided for daemon ingress")
 	return map[string]string{}
 }
 
@@ -562,7 +562,7 @@ func (ni *ingressInvocation) CheckTestServersPortAssignments(ing *api_v1beta1.In
 	}
 
 	// Removing pods so that endpoints get updated
-	dep.Spec.Replicas = types.Int32P(0)
+	dep.Spec.Replicas = pointer.Int32P(0)
 	_, err = ni.KubeClient.AppsV1().Deployments(dep.Namespace).Update(context.TODO(), dep, metav1.UpdateOptions{})
 	if err != nil {
 		return err
@@ -603,7 +603,7 @@ func (ni *ingressInvocation) CheckTestServersPortAssignments(ing *api_v1beta1.In
 	if err != nil {
 		return err
 	}
-	dep.Spec.Replicas = types.Int32P(2)
+	dep.Spec.Replicas = pointer.Int32P(2)
 	_, err = ni.KubeClient.AppsV1().Deployments(dep.Namespace).Update(context.TODO(), dep, metav1.UpdateOptions{})
 	if err != nil {
 		return err
@@ -696,7 +696,7 @@ func (ni *ingressInvocation) CreateResourceWithHostNames() (metav1.ObjectMeta, e
 	_, err = ni.KubeClient.AppsV1().StatefulSets(ni.Namespace()).Create(context.TODO(), &apps.StatefulSet{
 		ObjectMeta: meta,
 		Spec: apps.StatefulSetSpec{
-			Replicas:    types.Int32P(2),
+			Replicas:    pointer.Int32P(2),
 			ServiceName: meta.Name,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: meta.Labels,
@@ -802,7 +802,7 @@ func (ni *ingressInvocation) CreateResourceWithBackendWeight() (metav1.ObjectMet
 			Namespace: meta.Namespace,
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":         "deployment",
@@ -856,7 +856,7 @@ func (ni *ingressInvocation) CreateResourceWithBackendWeight() (metav1.ObjectMet
 			Namespace: meta.Namespace,
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":         "deployment",
@@ -960,7 +960,7 @@ func (ni *ingressInvocation) CreateResourceWithBackendMaxConn(maxconn int) (meta
 			Namespace: meta.Namespace,
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":         "deployment",
@@ -1047,7 +1047,7 @@ func (ni *ingressInvocation) CreateResourceWithServiceAuth(secret *core.Secret) 
 			Namespace: meta.Namespace,
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":         "deployment",
@@ -1134,7 +1134,7 @@ func (ni *ingressInvocation) CreateResourceWithServiceAnnotation(svcAnnotation m
 			Namespace: meta.Namespace,
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":         meta.Name,
@@ -1217,7 +1217,7 @@ func (ni *ingressInvocation) CreateResourceWithSendProxy(version string) (metav1
 			Namespace: meta.Namespace,
 		},
 		Spec: apps.DeploymentSpec{
-			Replicas: types.Int32P(1),
+			Replicas: pointer.Int32P(1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app":         meta.Name,

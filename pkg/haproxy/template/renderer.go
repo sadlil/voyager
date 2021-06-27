@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,8 +25,8 @@ import (
 
 	hpi "voyagermesh.dev/voyager/pkg/haproxy/api"
 
-	"github.com/appscode/go/log"
 	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
 )
 
 func RenderConfig(data hpi.TemplateData) (string, error) {
@@ -38,7 +38,7 @@ func RenderConfig(data hpi.TemplateData) (string, error) {
 	var buf bytes.Buffer
 	err := haproxyTemplate.ExecuteTemplate(&buf, "haproxy.cfg", data)
 	if err != nil {
-		log.Error(err)
+		klog.Error(err)
 		return "", err
 	}
 	lines := strings.Split(buf.String(), "\n")

@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -38,16 +38,5 @@ func (r Ingress) ObjectReference() *core.ObjectReference {
 		Name:            r.Name,
 		UID:             r.UID,
 		ResourceVersion: r.ResourceVersion,
-	}
-}
-
-func (c Certificate) ObjectReference() *core.ObjectReference {
-	return &core.ObjectReference{
-		APIVersion:      SchemeGroupVersion.String(),
-		Kind:            ResourceKindCertificate,
-		Namespace:       c.Namespace,
-		Name:            c.Name,
-		UID:             c.UID,
-		ResourceVersion: c.ResourceVersion,
 	}
 }

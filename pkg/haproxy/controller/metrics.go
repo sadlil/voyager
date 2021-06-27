@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package controller
 import (
 	"sync/atomic"
 
-	"github.com/appscode/go/log"
+	"k8s.io/klog/v2"
 )
 
 var (
@@ -30,15 +30,15 @@ var (
 
 func incConfigChangedCounter() {
 	atomic.AddUint64(&configChanged, 1)
-	log.Infoln("config changed:", atomic.LoadUint64(&configChanged))
+	klog.Infoln("config changed:", atomic.LoadUint64(&configChanged))
 }
 
 func incCertChangedCounter() {
 	atomic.AddUint64(&certChanged, 1)
-	log.Infoln("cert changed:", atomic.LoadUint64(&certChanged))
+	klog.Infoln("cert changed:", atomic.LoadUint64(&certChanged))
 }
 
 func incReloadCounter() {
 	atomic.AddUint64(&reloadPerformed, 1)
-	log.Infoln("HAProxy reloaded:", atomic.LoadUint64(&reloadPerformed))
+	klog.Infoln("HAProxy reloaded:", atomic.LoadUint64(&reloadPerformed))
 }

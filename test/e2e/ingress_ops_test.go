@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import (
 	"voyagermesh.dev/voyager/test/framework"
 	"voyagermesh.dev/voyager/test/test-server/client"
 
-	"github.com/appscode/go/log"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
@@ -34,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/klog/v2"
 )
 
 var _ = Describe("IngressOperations", func() {
@@ -944,9 +944,9 @@ var _ = Describe("IngressOperations", func() {
 			)
 			Expect(err).To(HaveOccurred())
 
-			log.Warningln("Waiting 2 minute for timer to be reset")
+			klog.Warningln("Waiting 2 minute for timer to be reset")
 			time.Sleep(time.Minute * 2)
-			log.Warningln("Request should response")
+			klog.Warningln("Request should response")
 			err = f.Ingress.DoHTTP(framework.MaxRetry, "", ing, eps, "GET",
 				"/testpath/ok",
 				func(r *client.Response) bool {
@@ -1001,9 +1001,9 @@ var _ = Describe("IngressOperations", func() {
 			Expect(<-errChan).NotTo(HaveOccurred())
 			Expect(<-errChan).NotTo(HaveOccurred())
 
-			log.Warningln("Waiting 2 minute for timer to be reset")
+			klog.Warningln("Waiting 2 minute for timer to be reset")
 			time.Sleep(time.Minute * 1)
-			log.Warningln("Request should response")
+			klog.Warningln("Request should response")
 			err = f.Ingress.DoHTTP(framework.MaxRetry, "", ing, eps, "GET",
 				"/testpath/ok",
 				func(r *client.Response) bool {

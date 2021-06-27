@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import (
 	"voyagermesh.dev/voyager/pkg/eventer"
 	"voyagermesh.dev/voyager/pkg/operator"
 
+	license "go.bytebuilders.dev/license-verifier/kubernetes"
 	admission "k8s.io/api/admission/v1beta1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -118,10 +119,13 @@ func (c completedConfig) New() (*VoyagerServer, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	operator, err := c.OperatorConfig.New()
 	if err != nil {
 		return nil, err
 	}
+
+	license.NewLicenseEnforcer(c.OperatorConfig.ClientConfig, c.OperatorConfig.LicenseFile).Install(genericServer.Handler.NonGoRestfulMux)
 
 	s := &VoyagerServer{
 		GenericAPIServer: genericServer,

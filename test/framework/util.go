@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package framework
 import (
 	"net"
 
-	"github.com/appscode/go/crypto/rand"
 	"gomodules.xyz/cert"
+	"gomodules.xyz/x/crypto/rand"
 )
 
 func (ri *rootInvocation) UniqueName() string {

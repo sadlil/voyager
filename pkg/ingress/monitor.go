@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,11 +19,11 @@ package ingress
 import (
 	"context"
 
-	"github.com/appscode/go/log"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	kerr "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 	kutil "kmodules.xyz/client-go"
 	core_util "kmodules.xyz/client-go/core/v1"
 	meta_util "kmodules.xyz/client-go/meta"
@@ -38,7 +38,7 @@ func (c *controller) ensureMonitoringAgent(monSpec *mona.AgentSpec) (kutil.VerbT
 	// do this before applying new agent-type annotation
 	// ignore err here
 	if err := c.ensureMonitoringAgentDeleted(agent); err != nil {
-		log.Warningf("failed to delete old monitoring agent, reason: %s", err)
+		klog.Warningf("failed to delete old monitoring agent, reason: %s", err)
 	}
 
 	// create/update new agent

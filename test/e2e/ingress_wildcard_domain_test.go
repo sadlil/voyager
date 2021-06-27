@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,12 +26,12 @@ import (
 	"voyagermesh.dev/voyager/test/framework"
 	"voyagermesh.dev/voyager/test/test-server/client"
 
-	"github.com/appscode/go/log"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/klog/v2"
 )
 
 var _ = Describe("IngressWithWildCardDomain", func() {
@@ -193,7 +193,7 @@ var _ = Describe("IngressWithWildCardDomain", func() {
 			Expect(len(eps)).Should(BeNumerically(">=", 1))
 
 			resolved := false
-			log.Warningln("Domain 'http.appscode.test' must resolve to ips in", eps)
+			klog.Warningln("Domain 'http.appscode.test' must resolve to ips in", eps)
 
 			// Checking for the domain is pointing to the ips found in the endpoints
 			// The IPs and domain must be in /etc/hosts file

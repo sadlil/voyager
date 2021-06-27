@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,6 +36,10 @@ type statsService struct {
 	ing Ingress
 }
 
+func (s statsService) ServiceMonitorAdditionalLabels() map[string]string {
+	return s.ing.OffshootLabels()
+}
+
 func (s statsService) GetNamespace() string {
 	return s.ing.Namespace
 }
@@ -45,7 +49,7 @@ func (s statsService) ServiceName() string {
 }
 
 func (s statsService) ServiceMonitorName() string {
-	return VoyagerPrefix + s.ing.Namespace + "-" + s.ing.Name
+	return s.ServiceName()
 }
 
 func (s statsService) Path() string {

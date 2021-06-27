@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ import (
 
 	"voyagermesh.dev/voyager/pkg/cmds/server"
 
-	"github.com/appscode/go/crypto/rand"
-	"github.com/appscode/go/log"
+	"gomodules.xyz/x/crypto/rand"
 	"k8s.io/client-go/util/homedir"
+	"k8s.io/klog/v2"
 )
 
 type E2EOptions struct {
@@ -75,9 +75,9 @@ func TestMain(m *testing.M) {
 
 func (c *E2EOptions) validate() {
 	if c.CloudProvider == "" {
-		log.Fatal("Provider name required, not provided")
+		klog.Fatal("Provider name required, not provided")
 	}
 	if !strings.HasPrefix(c.TestNamespace, "test-") {
-		log.Fatal("Namespace is not a Test namespace")
+		klog.Fatal("Namespace is not a Test namespace")
 	}
 }

@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 
-	"github.com/golang/glog"
 	ps "github.com/mitchellh/go-ps"
 	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -32,6 +33,8 @@ const (
 	haproxyPID    = "/var/run/haproxy.pid"
 	haproxySocket = "/var/run/haproxy.sock"
 )
+
+var haproxyDaemonMux sync.Mutex
 
 func getHAProxyPid() (int, error) {
 	file, err := os.Open(haproxyPID)
@@ -57,17 +60,17 @@ func checkHAProxyDaemon() (int, error) {
 		return 0, errors.Errorf("haproxy daemon not running (pid %d)", pid)
 	}
 
-	glog.Infof("haproxy daemon running (pid %d)", pid)
+	klog.Infof("haproxy daemon running (pid %d)", pid)
 	return pid, nil
 }
 
 func checkHAProxyConfig() error {
-	glog.Info("Checking haproxy config...")
+	klog.Info("Checking haproxy config...")
 	output, err := exec.Command("haproxy", "-c", "-f", haproxyConfig).CombinedOutput()
 	if err != nil {
 		return errors.Errorf("haproxy-check failed, reason: %s %s", string(output), err)
 	}
-	glog.Infof("haproxy-check: %s", string(output))
+	klog.Infof("haproxy-check: %s", string(output))
 	return nil
 }
 
@@ -75,14 +78,14 @@ func startHAProxy() error {
 	if err := checkHAProxyConfig(); err != nil {
 		return err
 	}
-	glog.Info("Starting haproxy...")
+	klog.Info("Starting haproxy...")
 
 	output, err := exec.Command("haproxy", "-f", haproxyConfig, "-p", haproxyPID).CombinedOutput()
 	if err != nil {
 		return errors.Errorf("failed to start haproxy, reason: %s %s", string(output), err)
 	}
 
-	glog.Infof("haproxy started: %s", string(output))
+	klog.Infof("haproxy started: %s", string(output))
 	return nil
 }
 
@@ -90,7 +93,7 @@ func reloadHAProxy(pid int) error {
 	if err := checkHAProxyConfig(); err != nil {
 		return err
 	}
-	glog.Info("Reloading haproxy...")
+	klog.Info("Reloading haproxy...")
 
 	output, err := exec.Command(
 		"haproxy",
@@ -103,15 +106,29 @@ func reloadHAProxy(pid int) error {
 		return errors.Errorf("failed to reload haproxy, reason: %s %s", string(output), err)
 	}
 
-	glog.Infof("haproxy reloaded: %s", string(output))
+	klog.Infof("haproxy reloaded: %s", string(output))
 	return nil
 }
 
 // reload if old haproxy daemon exists, otherwise start
 func startOrReloadHaproxy() error {
+	haproxyDaemonMux.Lock()
+	defer haproxyDaemonMux.Unlock()
 	if pid, err := checkHAProxyDaemon(); err != nil {
 		return startHAProxy()
 	} else {
 		return reloadHAProxy(pid)
+	}
+}
+
+// start haproxy if daemon doesn't exist, otherwise do nothing
+func startHaproxyIfNeeded() {
+	haproxyDaemonMux.Lock()
+	defer haproxyDaemonMux.Unlock()
+	if _, err := checkHAProxyDaemon(); err != nil {
+		klog.Error(err)
+		if err = startHAProxy(); err != nil {
+			klog.Error(err)
+		}
 	}
 }

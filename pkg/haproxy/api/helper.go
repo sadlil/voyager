@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,10 +23,14 @@ import (
 	"strings"
 
 	api "voyagermesh.dev/voyager/apis/voyager/v1beta1"
-	"voyagermesh.dev/voyager/pkg/certificate/providers"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/sets"
+)
+
+const (
+	URLPrefix         = "/.well-known/acme-challenge/"
+	ACMEResponderPort = 56791
 )
 
 func (td TemplateData) String() string {
@@ -188,7 +192,7 @@ func (td *TemplateData) moveAcmePathToTop() {
 
 			var acmeHost *HTTPHost
 			for k, path := range host.Paths {
-				if path.Path != providers.URLPrefix {
+				if path.Path != URLPrefix {
 					continue
 				}
 

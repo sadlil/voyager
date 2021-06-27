@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@ import (
 	cs "voyagermesh.dev/voyager/client/clientset/versioned"
 	"voyagermesh.dev/voyager/pkg/operator"
 
-	"github.com/appscode/go/crypto/rand"
 	. "github.com/onsi/gomega"
-	"github.com/spf13/afero"
+	"gomodules.xyz/blobfs"
 	"gomodules.xyz/cert/certstore"
+	"gomodules.xyz/x/crypto/rand"
 	core "k8s.io/api/core/v1"
 	crd_cs "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -73,7 +73,7 @@ type certificateInvocation struct {
 }
 
 func New(cfg *operator.OperatorConfig, testNamespace string, cleanup bool) *Framework {
-	cm, err := certstore.NewCertStore(afero.NewMemMapFs(), "/pki")
+	cm, err := certstore.New(blobfs.NewInMemoryFS(), "/pki")
 	Expect(err).NotTo(HaveOccurred())
 
 	err = cm.InitCA()

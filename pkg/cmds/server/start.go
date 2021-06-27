@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
+	license "go.bytebuilders.dev/license-verifier/kubernetes"
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
-	"kmodules.xyz/client-go/meta"
 	"kmodules.xyz/client-go/tools/clientcmd"
 )
 
@@ -48,7 +48,6 @@ func NewVoyagerOptions(out, errOut io.Writer) *VoyagerOptions {
 		RecommendedOptions: genericoptions.NewRecommendedOptions(
 			defaultEtcdPathPrefix,
 			server.Codecs.LegacyCodec(admissionv1beta1.SchemeGroupVersion),
-			genericoptions.NewProcessInfo("voyager-operator", meta.Namespace()),
 		),
 		OperatorOptions: NewOperatorOptions(),
 		StdOut:          out,
@@ -108,6 +107,10 @@ func (o VoyagerOptions) Run(stopCh <-chan struct{}) error {
 	if err != nil {
 		return err
 	}
+
+	// Start periodic license verification
+	//nolint:errcheck
+	go license.VerifyLicensePeriodically(config.OperatorConfig.ClientConfig, o.OperatorOptions.LicenseFile, stopCh)
 
 	return s.Run(stopCh)
 }

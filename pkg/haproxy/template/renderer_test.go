@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package template
 import (
 	"testing"
 
-	"github.com/appscode/go/log"
 	"github.com/stretchr/testify/assert"
+	"k8s.io/klog/v2"
 )
 
 func TestValidateConfig(t *testing.T) {
@@ -40,7 +40,7 @@ listen http-in
 	for cfg, result := range data {
 		err := ValidateConfig(cfg)
 		if err != nil {
-			log.Errorln(err)
+			klog.Errorln(err)
 		}
 		assert.Equal(t, result, err == nil)
 	}

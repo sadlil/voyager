@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import (
 
 	api "voyagermesh.dev/voyager/apis/voyager/v1beta1"
 
+	"gomodules.xyz/flags"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -71,9 +72,9 @@ func (c *controller) getExporterSidecar() (*core.Container, error) {
 			Name: "exporter",
 			Args: append([]string{
 				"export",
-				fmt.Sprintf("--address=:%d", monSpec.Prometheus.Port),
+				fmt.Sprintf("--address=:%d", monSpec.Prometheus.Exporter.Port),
 				fmt.Sprintf("--enable-analytics=%v", cli.EnableAnalytics),
-			}, cli.LoggerOptions.ToFlags()...),
+			}, flags.LoggerOptions.ToFlags()...),
 			Env: []core.EnvVar{
 				{
 					Name:  analytics.Key,
@@ -86,7 +87,7 @@ func (c *controller) getExporterSidecar() (*core.Container, error) {
 				{
 					Name:          api.ExporterPortName,
 					Protocol:      core.ProtocolTCP,
-					ContainerPort: int32(monSpec.Prometheus.Port),
+					ContainerPort: int32(monSpec.Prometheus.Exporter.Port),
 				},
 			},
 		}, nil
@@ -124,7 +125,7 @@ func (c *controller) ensureStatsService() (*core.Service, kutil.VerbType, error)
 			desired = append(desired, core.ServicePort{
 				Name:       api.ExporterPortName,
 				Protocol:   core.ProtocolTCP,
-				Port:       int32(monSpec.Prometheus.Port),
+				Port:       int32(monSpec.Prometheus.Exporter.Port),
 				TargetPort: intstr.FromString(api.ExporterPortName),
 			})
 		}

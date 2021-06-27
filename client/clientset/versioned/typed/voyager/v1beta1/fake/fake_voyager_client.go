@@ -1,5 +1,5 @@
 /*
-Copyright The Voyager Authors.
+Copyright AppsCode Inc. and Contributors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,10 +27,6 @@ import (
 
 type FakeVoyagerV1beta1 struct {
 	*testing.Fake
-}
-
-func (c *FakeVoyagerV1beta1) Certificates(namespace string) v1beta1.CertificateInterface {
-	return &FakeCertificates{c, namespace}
 }
 
 func (c *FakeVoyagerV1beta1) Ingresses(namespace string) v1beta1.IngressInterface {
